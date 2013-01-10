@@ -21,9 +21,9 @@ def get_content_type(path)
 end
  
 webserver = TCPServer.new port
-base_dir = Dir.new(".")
 while (session = webserver.accept)
   request = session.gets
+  continue if request.nil?
   trimmedrequest = request.gsub(/GET\ \//, '').gsub(/\ HTTP.*/, '').chomp
   resource =  trimmedrequest
   if dir.nil?
@@ -40,7 +40,7 @@ while (session = webserver.accept)
   end
  
   if !File.exists?(resource)
-    session.print "HTTP/1.1 404/Object Not Found\r\nServer Matteo\r\n\r\n"
+    session.print "HTTP/1.1 404/Object Not Found\r\n\r\n"
     session.print "404 - Resource cannot be found."
     session.close
     next

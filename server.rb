@@ -1,8 +1,10 @@
+#!/usr/bin/env ruby
 require "socket"
-require "pry"
 
-port = ARGV.shift
-directory = ARGV.shift
+port = ARGV[1]
+directory = ARGV[3]
+content_head = "<html><head><title></title></head><body>"
+content_foot = "</body></html>"
  
 def get_content_type(path)
     ext = File.extname(path)
@@ -18,13 +20,15 @@ def get_content_type(path)
     return "text/xml"   if ext == ".xsl"
     return "text/html"
 end
- 
+
+Dir.chdir(directory) unless directory.nil? 
 webserver = TCPServer.new('localhost', port)
 base_dir = Dir.new(".")
 puts "Server is ready at port: #{port}\n" 
 loop {
   Thread.start(webserver.accept) do |session|
     request = session.gets
+    puts "Directory: " + directory
     puts "Request: " + request
     trimmed_request = request.gsub(/GET\ \//, '').gsub(/\ HTTP.*/, '').chomp
     resource =  trimmed_request
@@ -49,6 +53,7 @@ loop {
     end
     if File.directory?(resource)
       session.print "HTTP/1.1 200/OK\r\nContent-type:text/html\r\n\r\n"
+      session.print(content_head)
       if resource == ""
         base_dir = Dir.new(".")
       else
@@ -80,6 +85,7 @@ loop {
         end
       end
     end
+    session.print(content_foot)
     session.close
   end
 }

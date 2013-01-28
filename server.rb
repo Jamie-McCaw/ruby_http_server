@@ -64,10 +64,10 @@ loop {
         end
         if file == ".."
           upper_dir = base_path.split("/")[0..-2].join("/")
-          session.print("<a href='#{upper_dir}'>#{file}/</a><br />")
+          session.print("<a href='/#{upper_dir}'>#{file}/</a><br />")
         else
           puts resource_path
-          session.print("<a href='#{resource_path}'>#{file}#{dir_sign}</a><br />")
+          session.print("<a href='/#{resource_path}'>#{file}#{dir_sign}</a><br />")
         end
       end
     else

@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require "socket"
-require "pry"
+require "cgi"
+
 
 port = ARGV[1]
 directory = ARGV[3]
@@ -23,7 +24,20 @@ def get_content_type(path)
     return "text/html"
 end
 
+def open_files(resource, session)
+  File.open(resource, "rb") do |f|
+    while (!f.eof?) do
+      buffer = f.read(256)
+      session.write(buffer)
+    end
+  end
+end
 
+def page_not_found(session)
+  session.print "HTTP/1.1 404/Object Not Found\r\n\r\n"
+  session.print "404 - Resource cannot be found."
+  session.close
+end
 
 Dir.chdir(directory) unless directory.nil? 
 webserver = TCPServer.new('localhost', port)
@@ -37,10 +51,9 @@ puts "Server is ready at port: #{port}\n"
       if request.nil?
         next
       end
-      puts "Directory: " + directory
+      puts "Directory: " + directory unless directory.nil?
       puts "Request: " + request
       request_method, trimmed_request = request.split(/\s/)
-      #trimmed_request = request.gsub(/GET\ \//, '').gsub(/\ HTTP.*/, '').chomp
       resource =  trimmed_request.sub(/\//, '')
       if directory.nil?
         session.puts "Hello, World!"
@@ -54,13 +67,38 @@ puts "Server is ready at port: #{port}\n"
         resource = "."
       end
       puts 'Resource: ' + resource
-    
-      if !File.exists?(resource)
-        session.print "HTTP/1.1 404/Object Not Found\r\n\r\n"
-        session.print "404 - Resource cannot be found."
+      if resource.include?('?')
+        parameters_array = []
+        page, params = resource.split(/[?]/)
+        parameters_array = params.split(/[=&]/)       
+        if parameters_array[1].include?('%')
+          parameters_array[1] = CGI::unescape(parameters_array[1])
+        end
+        session.print "HTTP/1.1 200/OK\r\nContent-type:text/html\r\n\r\n"
+        session.print(content_head)
+        puts 'Params' + parameters_array.inspect
+        parameters_array.each_slice(2) do |x|
+          session.print("<p>#{x.first + ' = ' + x[1]}</p>")
+        end
+        session.print(content_foot)
         session.close
         next
       end
+      if resource == 'form'
+        session.print "HTTP/1.1 200/OK\r\nContent-type:text/html\r\n\r\n"
+        session.close
+        next
+      end
+
+      if !File.exists?(resource)
+        if resource == 'redirect'
+          session.print "HTTP/1.1 307/Temporary Redirect\r\nLocation: http://localhost:#{port}/\r\n\r\n"
+          session.close
+        else
+          page_not_found(session)
+        end
+        next
+      end 
       if File.directory?(resource)
         session.print "HTTP/1.1 200/OK\r\nContent-type:text/html\r\n\r\n"
         session.print(content_head)
@@ -88,12 +126,7 @@ puts "Server is ready at port: #{port}\n"
       else
         contentType = get_content_type(resource)
         session.print "HTTP/1.1 200/OK\r\nContent-type: #{contentType}\r\n\r\n"
-        File.open(resource, "rb") do |f|
-          while (!f.eof?) do
-            buffer = f.read(256)
-            session.write(buffer)
-          end
-        end
+        open_files(resource, session)
       end
       session.print(content_foot) unless contentType == "text/plain"
       session.close
@@ -106,3 +139,4 @@ Process.waitall
     wpids.each { |wpid| Process.kil(signal, wpid) }
   }
 end
+

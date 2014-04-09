@@ -1,1 +1,1 @@
-This will be my first attempt at an HTTP Server written in Ruby.
+8th Light Apprenticeship task to create an HTTP-Server in Ruby to adhere to a test suite that is prebuilt called Cob Spec(Cob Spec being built using FitNesse).
